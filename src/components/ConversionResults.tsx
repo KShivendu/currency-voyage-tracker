@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LegendType } from "recharts";
 import { CurrencyRate, formatCurrency, formatDate, currencies } from "@/services/currencyService";
 
 interface SourceData {
@@ -127,7 +127,13 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
                     labelFormatter={(label) => `Date: ${label}`}
                   />
                   <Legend 
-                    formatter={(value, entry) => getSeriesName(entry.dataKey as string)}
+                    formatter={(value, entry, index) => {
+                      // Fix: Use entry.value instead of entry.dataKey
+                      if (entry && typeof entry.value === 'string') {
+                        return getSeriesName(entry.value);
+                      }
+                      return value;
+                    }}
                   />
                   {dataSeries.map((series) => (
                     <Line
