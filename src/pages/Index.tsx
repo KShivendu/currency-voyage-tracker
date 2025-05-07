@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import CurrencyConverter from "@/components/CurrencyConverter";
@@ -15,16 +14,23 @@ const Index = () => {
     currency: string;
     rates: CurrencyRate[];
   }[]>([]);
+  const [monthlyOnly, setMonthlyOnly] = useState<boolean>(false);
 
   const targetCurrencies = currencies
     .filter((currency) => currency.code !== sourceCurrency)
     .map((currency) => currency.code)
     .slice(0, 5); // Limit to 5 target currencies for better visualization
 
-  const handleConvert = async (source: string, amount: number) => {
+  const handleConvert = async (
+    source: string, 
+    targetCurrencies: string[], 
+    amount: number,
+    showMonthlyOnly: boolean
+  ) => {
     setSourceAmount(amount);
     setSourceCurrency(source);
     setLoading(true);
+    setMonthlyOnly(showMonthlyOnly);
 
     try {
       // Fetch rates for each target currency
@@ -32,7 +38,7 @@ const Index = () => {
         const rates = await fetchHistoricalRates(source, target);
         return {
           currency: target,
-          rates,
+          rates: showMonthlyOnly ? filterMonthlyRates(rates) : rates,
         };
       });
 
@@ -53,6 +59,28 @@ const Index = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Filter rates to show only the 1st of each month
+  const filterMonthlyRates = (rates: CurrencyRate[]): CurrencyRate[] => {
+    const monthlyRates: CurrencyRate[] = [];
+    const monthsAdded = new Set<string>();
+
+    // Sort rates by time (oldest first)
+    const sortedRates = [...rates].sort((a, b) => a.time - b.time);
+
+    sortedRates.forEach(rate => {
+      const date = new Date(rate.time);
+      const monthYear = `${date.getFullYear()}-${date.getMonth() + 1}`;
+      
+      // Only keep the first rate of each month (which should be closest to the 1st)
+      if (!monthsAdded.has(monthYear)) {
+        monthsAdded.add(monthYear);
+        monthlyRates.push(rate);
+      }
+    });
+
+    return monthlyRates;
   };
 
   return (
