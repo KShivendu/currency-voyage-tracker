@@ -1,7 +1,6 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowUp, ArrowDown, DollarSign, Euro, CurrencyRupee } from "lucide-react";
+import { ArrowUp, ArrowDown, DollarSign, Euro, IndianRupee } from "lucide-react";
 import { CurrencyRate, formatCurrency } from "@/services/currencyService";
 
 interface CurrentRatesProps {
@@ -30,7 +29,7 @@ const CurrentRates: React.FC<CurrentRatesProps> = ({
       case "EUR":
         return <Euro className="h-6 w-6" />;
       case "INR":
-        return <CurrencyRupee className="h-6 w-6" />;
+        return <IndianRupee className="h-6 w-6" />;
       default:
         return <DollarSign className="h-6 w-6" />;
     }
