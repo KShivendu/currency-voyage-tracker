@@ -15,25 +15,46 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CurrencyConverterProps {
-  onConvert: (source: string, targetCurrencies: string[], amount: number, monthlyOnly: boolean) => void;
+  onConvert: (
+    sources: Array<{currency: string, amount: number}>, 
+    targetCurrencies: string[], 
+    monthlyOnly: boolean
+  ) => void;
 }
 
 const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
-  const [amount, setAmount] = useState<string>("1000");
-  const [sourceCurrency, setSourceCurrency] = useState<string>("USD");
-  const [targetCurrencies, setTargetCurrencies] = useState<string[]>(["EUR", "INR"]);
+  const [mode, setMode] = useState<"single" | "compare">("single");
+  
+  // Source 1
+  const [amount1, setAmount1] = useState<string>("1000");
+  const [sourceCurrency1, setSourceCurrency1] = useState<string>("USD");
+  
+  // Source 2 (for comparison)
+  const [amount2, setAmount2] = useState<string>("5000");
+  const [sourceCurrency2, setSourceCurrency2] = useState<string>("EUR");
+  
+  const [targetCurrencies, setTargetCurrencies] = useState<string[]>(["INR"]);
   const [monthlyOnly, setMonthlyOnly] = useState<boolean>(false);
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>, sourceIndex: number) => {
     // Allow only numbers and decimals
     const value = e.target.value.replace(/[^0-9.]/g, "");
-    setAmount(value);
+    if (sourceIndex === 1) {
+      setAmount1(value);
+    } else {
+      setAmount2(value);
+    }
   };
 
-  const handleSourceCurrencyChange = (value: string) => {
-    setSourceCurrency(value);
+  const handleSourceCurrencyChange = (value: string, sourceIndex: number) => {
+    if (sourceIndex === 1) {
+      setSourceCurrency1(value);
+    } else {
+      setSourceCurrency2(value);
+    }
     
     // Remove source currency from target currencies if it's selected
     if (targetCurrencies.includes(value)) {
@@ -42,7 +63,8 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
   };
 
   const toggleTargetCurrency = (currency: string) => {
-    if (currency === sourceCurrency) return; // Can't select source currency as target
+    // Can't select source currency as target
+    if (currency === sourceCurrency1 || (mode === "compare" && currency === sourceCurrency2)) return;
     
     if (targetCurrencies.includes(currency)) {
       setTargetCurrencies(targetCurrencies.filter(curr => curr !== currency));
@@ -53,14 +75,40 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const numericAmount = parseFloat(amount) || 0;
-    onConvert(sourceCurrency, targetCurrencies, numericAmount, monthlyOnly);
+    
+    if (mode === "single") {
+      // Single mode - convert one amount
+      const numericAmount = parseFloat(amount1) || 0;
+      onConvert(
+        [{currency: sourceCurrency1, amount: numericAmount}], 
+        targetCurrencies, 
+        monthlyOnly
+      );
+    } else {
+      // Compare mode - convert two amounts
+      const numericAmount1 = parseFloat(amount1) || 0;
+      const numericAmount2 = parseFloat(amount2) || 0;
+      onConvert(
+        [
+          {currency: sourceCurrency1, amount: numericAmount1},
+          {currency: sourceCurrency2, amount: numericAmount2}
+        ], 
+        targetCurrencies, 
+        monthlyOnly
+      );
+    }
   };
 
-  // Filter out source currency from available targets
-  const availableTargets = currencies.filter(
-    currency => currency.code !== sourceCurrency
-  );
+  // Filter out source currencies from available targets
+  const getAvailableTargets = () => {
+    if (mode === "single") {
+      return currencies.filter(currency => currency.code !== sourceCurrency1);
+    } else {
+      return currencies.filter(
+        currency => currency.code !== sourceCurrency1 && currency.code !== sourceCurrency2
+      );
+    }
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -69,36 +117,109 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
-            <Input
-              id="amount"
-              type="text"
-              value={amount}
-              onChange={handleAmountChange}
-              placeholder="Enter amount"
-              className="border-brand-blue focus:ring-brand-purple"
-            />
-          </div>
+          <Tabs 
+            value={mode} 
+            onValueChange={(value) => setMode(value as "single" | "compare")}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="single">Single Amount</TabsTrigger>
+              <TabsTrigger value="compare">Compare Amounts</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="single" className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="amount1">Amount</Label>
+                <Input
+                  id="amount1"
+                  type="text"
+                  value={amount1}
+                  onChange={(e) => handleAmountChange(e, 1)}
+                  placeholder="Enter amount"
+                  className="border-brand-blue focus:ring-brand-purple"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="sourceCurrency">Source Currency</Label>
-            <Select
-              value={sourceCurrency}
-              onValueChange={handleSourceCurrencyChange}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies.map((currency) => (
-                  <SelectItem key={currency.code} value={currency.code}>
-                    {currency.symbol} {currency.code} - {currency.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="sourceCurrency1">Source Currency</Label>
+                <Select
+                  value={sourceCurrency1}
+                  onValueChange={(value) => handleSourceCurrencyChange(value, 1)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies.map((currency) => (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.symbol} {currency.code} - {currency.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="compare" className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* First Source */}
+                <div className="space-y-2">
+                  <Label htmlFor="amount1">Amount 1</Label>
+                  <Input
+                    id="amount1"
+                    type="text"
+                    value={amount1}
+                    onChange={(e) => handleAmountChange(e, 1)}
+                    placeholder="Enter amount"
+                    className="border-brand-blue focus:ring-brand-purple"
+                  />
+                  <Select
+                    value={sourceCurrency1}
+                    onValueChange={(value) => handleSourceCurrencyChange(value, 1)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencies.map((currency) => (
+                        <SelectItem key={currency.code} value={currency.code}>
+                          {currency.symbol} {currency.code} - {currency.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Second Source */}
+                <div className="space-y-2">
+                  <Label htmlFor="amount2">Amount 2</Label>
+                  <Input
+                    id="amount2"
+                    type="text"
+                    value={amount2}
+                    onChange={(e) => handleAmountChange(e, 2)}
+                    placeholder="Enter amount"
+                    className="border-brand-blue focus:ring-brand-purple"
+                  />
+                  <Select
+                    value={sourceCurrency2}
+                    onValueChange={(value) => handleSourceCurrencyChange(value, 2)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencies.map((currency) => (
+                        <SelectItem key={currency.code} value={currency.code}>
+                          {currency.symbol} {currency.code} - {currency.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <div className="space-y-2">
             <Label>Target Currencies</Label>
@@ -116,7 +237,7 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
               <DropdownMenuContent className="w-full bg-white" align="start">
                 <DropdownMenuLabel>Select Currencies</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {availableTargets.map((currency) => (
+                {getAvailableTargets().map((currency) => (
                   <DropdownMenuCheckboxItem
                     key={currency.code}
                     checked={targetCurrencies.includes(currency.code)}
@@ -148,7 +269,7 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
             className="w-full bg-brand-blue hover:bg-brand-purple transition-colors"
             disabled={targetCurrencies.length === 0}
           >
-            Convert
+            {mode === "single" ? "Convert" : "Compare"}
           </Button>
         </form>
       </CardContent>

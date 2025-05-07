@@ -5,19 +5,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { CurrencyRate, formatCurrency, formatDate, currencies } from "@/services/currencyService";
 
+interface SourceData {
+  currency: string;
+  amount: number;
+}
+
 interface ConversionResultsProps {
-  sourceAmount: number;
-  sourceCurrency: string;
+  sources: SourceData[];
   ratesData: {
     currency: string;
     rates: CurrencyRate[];
+    sourceIndex: number;
   }[];
   loading: boolean;
 }
 
 const ConversionResults: React.FC<ConversionResultsProps> = ({
-  sourceAmount,
-  sourceCurrency,
+  sources,
   ratesData,
   loading,
 }) => {
@@ -33,7 +37,7 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
     );
   }
 
-  if (ratesData.length === 0) {
+  if (ratesData.length === 0 || sources.length === 0) {
     return null;
   }
 
@@ -48,8 +52,13 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
       
       ratesData.forEach(item => {
         const rateForDate = item.rates.find(rate => rate.time === date);
+        
         if (rateForDate) {
-          dataPoint[item.currency] = sourceAmount * rateForDate.value;
+          // Create a unique key for each source-target combination
+          const source = sources[item.sourceIndex];
+          const key = `${source.currency}_${source.amount}_to_${item.currency}`;
+          
+          dataPoint[key] = source.amount * rateForDate.value;
         }
       });
       
@@ -59,21 +68,36 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
 
   const chartData = processChartData();
   
-  // Create color map for currencies
-  const colorMap: Record<string, string> = {
-    EUR: "#3A86FF", // Blue
-    INR: "#8338EC", // Purple
-    GBP: "#06D6A0", // Green
-    JPY: "#FF006E", // Pink
-    CAD: "#FB5607", // Orange
-    AUD: "#FFBE0B", // Yellow
+  // Create color map for data series
+  const colors = [
+    "#3A86FF", // Blue
+    "#8338EC", // Purple
+    "#06D6A0", // Green
+    "#FF006E", // Pink
+    "#FB5607", // Orange
+    "#FFBE0B", // Yellow
+  ];
+
+  // Create a mapping for display names
+  const getSeriesName = (key: string) => {
+    const [sourceCurrency, sourceAmount, _, targetCurrency] = key.split('_');
+    return `${sourceAmount} ${sourceCurrency} → ${targetCurrency}`;
   };
+
+  // Get unique data series
+  const dataSeries = Object.keys(chartData[0] || {})
+    .filter(key => key !== 'date')
+    .map((key, index) => ({
+      key,
+      name: getSeriesName(key),
+      color: colors[index % colors.length]
+    }));
 
   return (
     <Card className="w-full mt-8">
       <CardHeader>
         <CardTitle className="text-center text-brand-dark">
-          {sourceAmount.toLocaleString()} {sourceCurrency} Conversion Over Time
+          Currency Conversion Over Time
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -95,19 +119,23 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
                   <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip
-                    formatter={(value: number, name: string) => [
-                      formatCurrency(value, name),
-                      name,
-                    ]}
+                    formatter={(value: number, name: string, props: any) => {
+                      const key = props.dataKey;
+                      const targetCurrency = key.split('_').pop();
+                      return [formatCurrency(value, targetCurrency), getSeriesName(key)];
+                    }}
+                    labelFormatter={(label) => `Date: ${label}`}
                   />
-                  <Legend />
-                  {ratesData.map((item) => (
+                  <Legend 
+                    formatter={(value, entry) => getSeriesName(entry.dataKey as string)}
+                  />
+                  {dataSeries.map((series) => (
                     <Line
-                      key={item.currency}
+                      key={series.key}
                       type="monotone"
-                      dataKey={item.currency}
-                      name={`${item.currency} (${currencies.find(c => c.code === item.currency)?.symbol || ''})`}
-                      stroke={colorMap[item.currency] || "#8884d8"}
+                      dataKey={series.key}
+                      name={series.name}
+                      stroke={series.color}
                       activeDot={{ r: 8 }}
                     />
                   ))}
@@ -123,9 +151,9 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
                 <thead>
                   <tr className="bg-brand-light border-b">
                     <th className="p-2 text-left">Date</th>
-                    {ratesData.map((item) => (
-                      <th key={item.currency} className="p-2 text-right">
-                        {item.currency}
+                    {dataSeries.map((series) => (
+                      <th key={series.key} className="p-2 text-right">
+                        {series.name}
                       </th>
                     ))}
                   </tr>
@@ -134,13 +162,16 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
                   {chartData.map((data, index) => (
                     <tr key={index} className="border-b hover:bg-gray-50">
                       <td className="p-2 text-left">{data.date}</td>
-                      {ratesData.map((item) => (
-                        <td key={item.currency} className="p-2 text-right">
-                          {data[item.currency]
-                            ? formatCurrency(data[item.currency], item.currency)
-                            : "N/A"}
-                        </td>
-                      ))}
+                      {dataSeries.map((series) => {
+                        const targetCurrency = series.key.split('_').pop();
+                        return (
+                          <td key={series.key} className="p-2 text-right">
+                            {data[series.key]
+                              ? formatCurrency(data[series.key], targetCurrency)
+                              : "N/A"}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>

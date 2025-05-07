@@ -5,41 +5,50 @@ import ConversionResults from "@/components/ConversionResults";
 import CurrentRates from "@/components/CurrentRates";
 import { fetchHistoricalRates, CurrencyRate, currencies } from "@/services/currencyService";
 
+interface SourceData {
+  currency: string;
+  amount: number;
+}
+
+interface RatesData {
+  currency: string;
+  rates: CurrencyRate[];
+  sourceIndex: number;
+}
+
 const Index = () => {
   const { toast } = useToast();
-  const [sourceAmount, setSourceAmount] = useState<number>(0);
-  const [sourceCurrency, setSourceCurrency] = useState<string>("");
+  const [sources, setSources] = useState<SourceData[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [ratesData, setRatesData] = useState<{
-    currency: string;
-    rates: CurrencyRate[];
-  }[]>([]);
+  const [ratesData, setRatesData] = useState<RatesData[]>([]);
   const [monthlyOnly, setMonthlyOnly] = useState<boolean>(false);
 
-  const targetCurrencies = currencies
-    .filter((currency) => currency.code !== sourceCurrency)
-    .map((currency) => currency.code)
-    .slice(0, 5); // Limit to 5 target currencies for better visualization
-
   const handleConvert = async (
-    source: string, 
+    sourcesData: SourceData[],
     targetCurrencies: string[], 
-    amount: number,
     showMonthlyOnly: boolean
   ) => {
-    setSourceAmount(amount);
-    setSourceCurrency(source);
+    setSources(sourcesData);
     setLoading(true);
     setMonthlyOnly(showMonthlyOnly);
 
     try {
-      // Fetch rates for each target currency
-      const fetchPromises = targetCurrencies.map(async (target) => {
-        const rates = await fetchHistoricalRates(source, target);
-        return {
-          currency: target,
-          rates: showMonthlyOnly ? filterMonthlyRates(rates) : rates,
-        };
+      // For each source and target currency combination, fetch rates
+      const fetchPromises: Promise<RatesData>[] = [];
+
+      // Loop through each source currency
+      sourcesData.forEach((source, sourceIndex) => {
+        // For each source, fetch rates for all target currencies
+        targetCurrencies.forEach(target => {
+          fetchPromises.push(
+            fetchHistoricalRates(source.currency, target)
+              .then(rates => ({
+                currency: target,
+                rates: showMonthlyOnly ? filterMonthlyRates(rates) : rates,
+                sourceIndex
+              }))
+          );
+        });
       });
 
       const results = await Promise.all(fetchPromises);
@@ -83,6 +92,27 @@ const Index = () => {
     return monthlyRates;
   };
 
+  // Group rates by target currency
+  const getCurrentRatesData = () => {
+    if (sources.length === 0 || ratesData.length === 0) {
+      return [];
+    }
+
+    const uniqueTargets = Array.from(new Set(ratesData.map(data => data.currency)));
+    
+    return uniqueTargets.map(target => {
+      const dataForTarget = ratesData.filter(data => data.currency === target);
+      return {
+        currency: target,
+        sources: dataForTarget.map(data => ({
+          sourceIndex: data.sourceIndex,
+          rate: data.rates[data.rates.length - 1],
+          source: sources[data.sourceIndex]
+        }))
+      };
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-100">
       <div className="container py-8">
@@ -98,15 +128,13 @@ const Index = () => {
           
           {ratesData.length > 0 && (
             <CurrentRates
-              sourceAmount={sourceAmount}
-              sourceCurrency={sourceCurrency}
-              ratesData={ratesData}
+              sources={sources}
+              currentRatesData={getCurrentRatesData()}
             />
           )}
           
           <ConversionResults
-            sourceAmount={sourceAmount}
-            sourceCurrency={sourceCurrency}
+            sources={sources}
             ratesData={ratesData}
             loading={loading}
           />
