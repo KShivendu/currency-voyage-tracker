@@ -34,11 +34,10 @@ export const fetchHistoricalRates = async (
   unit: string = "year"
 ): Promise<CurrencyRate[]> => {
   try {
-    const encodedUrl = encodeURIComponent(
-      `https://wise.com/rates/history+live?source=${source}&target=${target}&length=${length}&resolution=${resolution}&unit=${unit}`
-    );
+    const url = `https://wise.com/rates/history+live?source=${source}&target=${target}&length=${length}&resolution=${resolution}&unit=${unit}`;
+    // const encodedUrl = encodeURIComponent(url);
     
-    const response = await fetch(`${PROXY_URL}${encodedUrl}`);
+    const response = await fetch(`${PROXY_URL}${url}`);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch rates: ${response.statusText}`);
