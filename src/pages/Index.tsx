@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { DateRange } from "react-day-picker";
 import { useToast } from "@/components/ui/use-toast";
 import CurrencyConverter from "@/components/CurrencyConverter";
 import ConversionResults from "@/components/ConversionResults";
@@ -26,7 +27,8 @@ const Index = () => {
   const handleConvert = async (
     sourcesData: SourceData[],
     targetCurrencies: string[], 
-    showMonthlyOnly: boolean
+    showMonthlyOnly: boolean,
+    dateRange?: DateRange
   ) => {
     setSources(sourcesData);
     setLoading(true);
@@ -41,7 +43,7 @@ const Index = () => {
         // For each source, fetch rates for all target currencies
         targetCurrencies.forEach(target => {
           fetchPromises.push(
-            fetchHistoricalRates(source.currency, target)
+            fetchHistoricalRates(source.currency, target, dateRange)
               .then(rates => ({
                 currency: target,
                 rates: showMonthlyOnly ? filterMonthlyRates(rates) : rates,
