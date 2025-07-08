@@ -41,6 +41,8 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
     return null;
   }
 
+  const isCompareMode = sources.length > 1;
+
   // Process data for the chart
   const processChartData = () => {
     // Find the earliest date across all currencies
@@ -92,6 +94,25 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
       name: getSeriesName(key),
       color: colors[index % colors.length]
     }));
+
+  // Helper function to calculate difference between two amounts for the same target currency
+  const calculateDifference = (data: any, targetCurrency: string) => {
+    if (!isCompareMode) return null;
+    
+    const source1Key = `${sources[0].currency}_${sources[0].amount}_to_${targetCurrency}`;
+    const source2Key = `${sources[1].currency}_${sources[1].amount}_to_${targetCurrency}`;
+    
+    const amount1 = data[source1Key];
+    const amount2 = data[source2Key];
+    
+    if (amount1 && amount2) {
+      return amount1 - amount2;
+    }
+    return null;
+  };
+
+  // Get unique target currencies for table headers
+  const uniqueTargetCurrencies = Array.from(new Set(ratesData.map(item => item.currency)));
 
   return (
     <Card className="w-full mt-8">
@@ -162,6 +183,11 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
                         {series.name}
                       </th>
                     ))}
+                    {isCompareMode && uniqueTargetCurrencies.map((currency) => (
+                      <th key={`diff-${currency}`} className="p-2 text-right bg-yellow-50">
+                        Difference ({currency})
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -174,6 +200,19 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
                           <td key={series.key} className="p-2 text-right">
                             {data[series.key]
                               ? formatCurrency(data[series.key], targetCurrency)
+                              : "N/A"}
+                          </td>
+                        );
+                      })}
+                      {isCompareMode && uniqueTargetCurrencies.map((currency) => {
+                        const difference = calculateDifference(data, currency);
+                        return (
+                          <td key={`diff-${currency}`} className={`p-2 text-right font-medium bg-yellow-50 ${
+                            difference && difference > 0 ? 'text-green-600' : 
+                            difference && difference < 0 ? 'text-red-600' : ''
+                          }`}>
+                            {difference !== null 
+                              ? (difference > 0 ? '+' : '') + formatCurrency(Math.abs(difference), currency)
                               : "N/A"}
                           </td>
                         );
