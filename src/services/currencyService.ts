@@ -20,7 +20,8 @@ export const currencies = [
 ];
 
 // Use a proxy server to avoid CORS issues
-const PROXY_URL = "https://api.allorigins.win/raw?url=";
+// const PROXY_URL = "https://api.allorigins.win/raw?url=";
+const PROXY_URL = "https://cors-anywhere.herokuapp.com/";
 
 /**
  * Fetches historical currency rates from the Wise API
