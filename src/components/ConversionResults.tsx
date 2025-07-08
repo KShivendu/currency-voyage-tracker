@@ -48,28 +48,28 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
     // Find the earliest date across all currencies
     const allDates = ratesData.flatMap(item => item.rates.map(rate => rate.time));
     const uniqueDates = [...new Set(allDates)].sort();
-    
+
     return uniqueDates.map(date => {
       const dataPoint: any = { date: formatDate(date) };
-      
+
       ratesData.forEach(item => {
         const rateForDate = item.rates.find(rate => rate.time === date);
-        
+
         if (rateForDate) {
           // Create a unique key for each source-target combination
           const source = sources[item.sourceIndex];
           const key = `${source.currency}_${source.amount}_to_${item.currency}`;
-          
+
           dataPoint[key] = source.amount * rateForDate.value;
         }
       });
-      
+
       return dataPoint;
     });
   };
 
   const chartData = processChartData();
-  
+
   // Create color map for data series
   const colors = [
     "#3A86FF", // Blue
@@ -98,14 +98,14 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
   // Helper function to calculate difference between two amounts for the same target currency
   const calculateDifference = (data: any, targetCurrency: string) => {
     if (!isCompareMode) return null;
-    
+
     const source1Key = `${sources[0].currency}_${sources[0].amount}_to_${targetCurrency}`;
     const source2Key = `${sources[1].currency}_${sources[1].amount}_to_${targetCurrency}`;
-    
+
     const amount1 = data[source1Key];
     const amount2 = data[source2Key];
-    
-    if (amount1 && amount2) {
+
+    if (amount1 !== undefined && amount2 !== undefined && amount1 !== null && amount2 !== null) {
       return amount1 - amount2;
     }
     return null;
@@ -127,7 +127,7 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
             <TabsTrigger value="chart">Chart</TabsTrigger>
             <TabsTrigger value="table">Table</TabsTrigger>
           </TabsList>
-          
+
           {/* Chart View */}
           <TabsContent value="chart" className="pt-4">
             <div className="w-full h-96">
@@ -147,7 +147,7 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
                     }}
                     labelFormatter={(label) => `Date: ${label}`}
                   />
-                  <Legend 
+                  <Legend
                     formatter={(value, entry, index) => {
                       // Fix: Use entry.value instead of entry.dataKey
                       if (entry && typeof entry.value === 'string') {
@@ -208,10 +208,10 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
                         const difference = calculateDifference(data, currency);
                         return (
                           <td key={`diff-${currency}`} className={`p-2 text-right font-medium bg-yellow-50 ${
-                            difference && difference > 0 ? 'text-green-600' : 
+                            difference && difference > 0 ? 'text-green-600' :
                             difference && difference < 0 ? 'text-red-600' : ''
                           }`}>
-                            {difference !== null 
+                            {difference !== null
                               ? (difference > 0 ? '+' : '') + formatCurrency(Math.abs(difference), currency)
                               : "N/A"}
                           </td>
@@ -221,6 +221,26 @@ const ConversionResults: React.FC<ConversionResultsProps> = ({
                   ))}
                 </tbody>
               </table>
+              {/* Total Difference Row */}
+              {isCompareMode && (
+                <div className="mt-4 p-4 bg-yellow-50 rounded">
+                  <div className="font-semibold mb-2 text-brand-dark">Total Difference Summary</div>
+                  <div className="flex flex-wrap gap-6">
+                    {uniqueTargetCurrencies.map((currency) => {
+                      // Sum absolute differences for this currency across all dates
+                      const totalDiff = chartData.reduce((sum: number, data: any) => {
+                        const diff = calculateDifference(data, currency as string);
+                        return sum + (diff !== null ? Math.abs(diff) : 0);
+                      }, 0);
+                      return (
+                        <div key={`total-diff-${currency}`} className="text-sm">
+                          <span className="font-medium">{currency}:</span> {formatCurrency(Number(totalDiff), String(currency))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
