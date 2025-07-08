@@ -1,5 +1,6 @@
 
 import { toast } from "sonner";
+import { DateRange } from "react-day-picker";
 
 export interface CurrencyRate {
   source: string;
@@ -29,13 +30,37 @@ const PROXY_URL = "https://cors-anywhere.herokuapp.com/";
 export const fetchHistoricalRates = async (
   source: string,
   target: string,
-  length: number = 5,
-  resolution: string = "daily",
-  unit: string = "year"
+  dateRange?: DateRange,
+  resolution: string = "daily"
 ): Promise<CurrencyRate[]> => {
   try {
-    const url = `https://wise.com/rates/history+live?source=${source}&target=${target}&length=${length}&resolution=${resolution}&unit=${unit}`;
-    // const encodedUrl = encodeURIComponent(url);
+    let url: string;
+    
+    if (dateRange?.from && dateRange?.to) {
+      // Calculate the time difference for length and unit
+      const timeDiff = dateRange.to.getTime() - dateRange.from.getTime();
+      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+      
+      // Determine appropriate unit and length based on date range
+      let length: number;
+      let unit: string;
+      
+      if (daysDiff <= 30) {
+        length = daysDiff;
+        unit = "day";
+      } else if (daysDiff <= 365) {
+        length = Math.ceil(daysDiff / 30);
+        unit = "month";
+      } else {
+        length = Math.ceil(daysDiff / 365);
+        unit = "year";
+      }
+      
+      url = `https://wise.com/rates/history+live?source=${source}&target=${target}&length=${length}&resolution=${resolution}&unit=${unit}`;
+    } else {
+      // Default to 1 year of data
+      url = `https://wise.com/rates/history+live?source=${source}&target=${target}&length=1&resolution=${resolution}&unit=year`;
+    }
     
     const response = await fetch(`${PROXY_URL}${url}`);
     
@@ -43,7 +68,18 @@ export const fetchHistoricalRates = async (
       throw new Error(`Failed to fetch rates: ${response.statusText}`);
     }
     
-    const data: CurrencyRate[] = await response.json();
+    let data: CurrencyRate[] = await response.json();
+    
+    // Filter data by date range if specified
+    if (dateRange?.from && dateRange?.to) {
+      const fromTime = dateRange.from.getTime();
+      const toTime = dateRange.to.getTime();
+      
+      data = data.filter(rate => 
+        rate.time >= fromTime && rate.time <= toTime
+      );
+    }
+    
     return data;
   } catch (error) {
     console.error("Error fetching currency rates:", error);
