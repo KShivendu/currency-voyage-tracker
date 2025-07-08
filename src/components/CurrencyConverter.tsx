@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { currencies } from "@/services/currencyService";
 import { cn } from "@/lib/utils";
-import { 
+import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -26,8 +26,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CurrencyConverterProps {
   onConvert: (
-    sources: Array<{currency: string, amount: number}>, 
-    targetCurrencies: string[], 
+    sources: Array<{currency: string, amount: number}>,
+    targetCurrencies: string[],
     monthlyOnly: boolean,
     dateRange?: DateRange
   ) => void;
@@ -35,17 +35,17 @@ interface CurrencyConverterProps {
 
 const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   const [mode, setMode] = useState<"single" | "compare">("single");
-  
+
   // Source 1
   const [amount1, setAmount1] = useState<string>("1000");
   const [sourceCurrency1, setSourceCurrency1] = useState<string>("USD");
-  
+
   // Source 2 (for comparison)
-  const [amount2, setAmount2] = useState<string>("5000");
+  const [amount2, setAmount2] = useState<string>("1000");
   const [sourceCurrency2, setSourceCurrency2] = useState<string>("EUR");
-  
+
   const [targetCurrencies, setTargetCurrencies] = useState<string[]>(["INR"]);
   const [monthlyOnly, setMonthlyOnly] = useState<boolean>(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -118,7 +118,7 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
     } else {
       setSourceCurrency2(value);
     }
-    
+
     // Remove source currency from target currencies if it's selected
     if (targetCurrencies.includes(value)) {
       setTargetCurrencies(targetCurrencies.filter(curr => curr !== value));
@@ -128,7 +128,7 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
   const toggleTargetCurrency = (currency: string) => {
     // Can't select source currency as target
     if (currency === sourceCurrency1 || (mode === "compare" && currency === sourceCurrency2)) return;
-    
+
     if (targetCurrencies.includes(currency)) {
       setTargetCurrencies(targetCurrencies.filter(curr => curr !== currency));
     } else {
@@ -138,16 +138,16 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Update URL with current form state
     updateURLParams();
-    
+
     if (mode === "single") {
       // Single mode - convert one amount
       const numericAmount = parseFloat(amount1) || 0;
       onConvert(
-        [{currency: sourceCurrency1, amount: numericAmount}], 
-        targetCurrencies, 
+        [{currency: sourceCurrency1, amount: numericAmount}],
+        targetCurrencies,
         monthlyOnly,
         dateRange
       );
@@ -159,8 +159,8 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
         [
           {currency: sourceCurrency1, amount: numericAmount1},
           {currency: sourceCurrency2, amount: numericAmount2}
-        ], 
-        targetCurrencies, 
+        ],
+        targetCurrencies,
         monthlyOnly,
         dateRange
       );
@@ -185,8 +185,8 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Tabs 
-            value={mode} 
+          <Tabs
+            value={mode}
             onValueChange={(value) => setMode(value as "single" | "compare")}
             className="w-full"
           >
@@ -194,7 +194,7 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
               <TabsTrigger value="single">Single Amount</TabsTrigger>
               <TabsTrigger value="compare">Compare Amounts</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="single" className="space-y-4 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="amount1">Amount</Label>
@@ -227,7 +227,7 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
                 </Select>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="compare" className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* First Source */}
@@ -257,7 +257,7 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 {/* Second Source */}
                 <div className="space-y-2">
                   <Label htmlFor="amount2">Amount 2</Label>
@@ -293,12 +293,12 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
             <Label>Target Currencies</Label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full justify-between"
                 >
-                  {targetCurrencies.length === 0 
-                    ? "Select target currencies" 
+                  {targetCurrencies.length === 0
+                    ? "Select target currencies"
                     : `${targetCurrencies.length} currencies selected`}
                 </Button>
               </DropdownMenuTrigger>
@@ -362,18 +362,18 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
           </div>
 
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="monthlyOnly" 
-              checked={monthlyOnly} 
-              onCheckedChange={(checked) => setMonthlyOnly(checked as boolean)} 
+            <Checkbox
+              id="monthlyOnly"
+              checked={monthlyOnly}
+              onCheckedChange={(checked) => setMonthlyOnly(checked as boolean)}
             />
             <Label htmlFor="monthlyOnly" className="cursor-pointer">
               Show monthly rates only (1st of each month)
             </Label>
           </div>
 
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className="w-full bg-brand-blue hover:bg-brand-purple transition-colors"
             disabled={targetCurrencies.length === 0}
           >
