@@ -1,5 +1,6 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,8 @@ interface CurrencyConverterProps {
 }
 
 const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [mode, setMode] = useState<"single" | "compare">("single");
   
   // Source 1
@@ -38,6 +41,45 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
   
   const [targetCurrencies, setTargetCurrencies] = useState<string[]>(["INR"]);
   const [monthlyOnly, setMonthlyOnly] = useState<boolean>(false);
+
+  // Load state from URL parameters on component mount
+  useEffect(() => {
+    const urlMode = searchParams.get('mode') as "single" | "compare" | null;
+    const urlAmount1 = searchParams.get('amount1');
+    const urlCurrency1 = searchParams.get('currency1');
+    const urlAmount2 = searchParams.get('amount2');
+    const urlCurrency2 = searchParams.get('currency2');
+    const urlTargets = searchParams.get('targets');
+    const urlMonthlyOnly = searchParams.get('monthlyOnly');
+
+    if (urlMode && (urlMode === "single" || urlMode === "compare")) {
+      setMode(urlMode);
+    }
+    if (urlAmount1) setAmount1(urlAmount1);
+    if (urlCurrency1) setSourceCurrency1(urlCurrency1);
+    if (urlAmount2) setAmount2(urlAmount2);
+    if (urlCurrency2) setSourceCurrency2(urlCurrency2);
+    if (urlTargets) {
+      const targets = urlTargets.split(',').filter(Boolean);
+      setTargetCurrencies(targets);
+    }
+    if (urlMonthlyOnly === 'true') setMonthlyOnly(true);
+  }, [searchParams]);
+
+  // Update URL parameters when state changes
+  const updateURLParams = () => {
+    const params = new URLSearchParams();
+    params.set('mode', mode);
+    params.set('amount1', amount1);
+    params.set('currency1', sourceCurrency1);
+    if (mode === "compare") {
+      params.set('amount2', amount2);
+      params.set('currency2', sourceCurrency2);
+    }
+    params.set('targets', targetCurrencies.join(','));
+    if (monthlyOnly) params.set('monthlyOnly', 'true');
+    setSearchParams(params);
+  };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>, sourceIndex: number) => {
     // Allow only numbers and decimals
@@ -75,6 +117,9 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Update URL with current form state
+    updateURLParams();
     
     if (mode === "single") {
       // Single mode - convert one amount
