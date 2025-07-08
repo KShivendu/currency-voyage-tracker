@@ -1,19 +1,13 @@
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { DateRange } from "react-day-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { currencies } from "@/services/currencyService";
-import { cn } from "@/lib/utils";
 import { 
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -28,8 +22,7 @@ interface CurrencyConverterProps {
   onConvert: (
     sources: Array<{currency: string, amount: number}>, 
     targetCurrencies: string[], 
-    monthlyOnly: boolean,
-    dateRange?: DateRange
+    monthlyOnly: boolean
   ) => void;
 }
 
@@ -48,10 +41,6 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
   
   const [targetCurrencies, setTargetCurrencies] = useState<string[]>(["INR"]);
   const [monthlyOnly, setMonthlyOnly] = useState<boolean>(false);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(new Date().getFullYear() - 1, new Date().getMonth(), new Date().getDate()),
-    to: new Date(),
-  });
 
   // Load state from URL parameters on component mount
   useEffect(() => {
@@ -62,8 +51,6 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
     const urlCurrency2 = searchParams.get('currency2');
     const urlTargets = searchParams.get('targets');
     const urlMonthlyOnly = searchParams.get('monthlyOnly');
-    const urlDateFrom = searchParams.get('dateFrom');
-    const urlDateTo = searchParams.get('dateTo');
 
     if (urlMode && (urlMode === "single" || urlMode === "compare")) {
       setMode(urlMode);
@@ -77,12 +64,6 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
       setTargetCurrencies(targets);
     }
     if (urlMonthlyOnly === 'true') setMonthlyOnly(true);
-    if (urlDateFrom && urlDateTo) {
-      setDateRange({
-        from: new Date(urlDateFrom),
-        to: new Date(urlDateTo),
-      });
-    }
   }, [searchParams]);
 
   // Update URL parameters when state changes
@@ -97,8 +78,6 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
     }
     params.set('targets', targetCurrencies.join(','));
     if (monthlyOnly) params.set('monthlyOnly', 'true');
-    if (dateRange?.from) params.set('dateFrom', dateRange.from.toISOString());
-    if (dateRange?.to) params.set('dateTo', dateRange.to.toISOString());
     setSearchParams(params);
   };
 
@@ -148,8 +127,7 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
       onConvert(
         [{currency: sourceCurrency1, amount: numericAmount}], 
         targetCurrencies, 
-        monthlyOnly,
-        dateRange
+        monthlyOnly
       );
     } else {
       // Compare mode - convert two amounts
@@ -161,8 +139,7 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
           {currency: sourceCurrency2, amount: numericAmount2}
         ], 
         targetCurrencies, 
-        monthlyOnly,
-        dateRange
+        monthlyOnly
       );
     }
   };
@@ -319,46 +296,6 @@ const CurrencyConverter: React.FC<CurrencyConverterProps> = ({ onConvert }) => {
             {targetCurrencies.length === 0 && (
               <p className="text-sm text-red-500">Please select at least one target currency</p>
             )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Date Range</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !dateRange && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                        {format(dateRange.to, "LLL dd, y")}
-                      </>
-                    ) : (
-                      format(dateRange.from, "LLL dd, y")
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
           </div>
 
           <div className="flex items-center space-x-2">
